@@ -142,9 +142,9 @@ public struct RedisClientConfig: Codable {
 
         switch (password, sslEnabled) {
             case let (pass?, true):
-                urlString = "rediss://:\(password)@\(hostname)\(databaseSuffix):\(port)"
+                urlString = "rediss://:\(pass)@\(hostname)\(databaseSuffix):\(port)"
             case let (pass?, false):
-                urlString = "redis://:\(password)@\(hostname)\(databaseSuffix):\(port)"
+                urlString = "redis://:\(pass)@\(hostname)\(databaseSuffix):\(port)"
             case (.none, true):
                 urlString = "rediss://\(hostname)\(databaseSuffix):\(port)"
             case (.none, false):
