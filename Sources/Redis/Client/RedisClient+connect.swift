@@ -20,7 +20,7 @@ extension RedisClient {
         if sslEnabled {
             do {
                 let sslContext = try SSLContext(configuration: .forClient())
-                let sslHandler = try OpenSSLClientHandler(context: sslContext)
+                let sslHandler = try OpenSSLClientHandler(context: sslContext, serverHostname: hostname)
                 _ = bootstrap
                 .channelInitializer { channel in
                     return channel.pipeline
