@@ -7,14 +7,14 @@ let package = Package(
         .library(name: "Redis", targets: ["Redis"])
     ],
     dependencies: [
-      // 🌎 Utility package containing tools for byte manipulation, Codable, OS APIs, and debugging.
-      .package(url: "https://github.com/vapor/core.git", from: "3.0.0"),
-
+        // 🌎 Utility package containing tools for byte manipulation, Codable, OS APIs, and debugging.
+        .package(url: "https://github.com/vapor/core.git", from: "3.0.0"),
+        .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "1.0.1"),
         // Core services for creating database integrations.
         .package(url: "https://github.com/vapor/database-kit.git", from: "1.0.0")
     ],
     targets: [
-      .target(name: "Redis", dependencies: ["Async", "Bits", "DatabaseKit", "Debugging", "COperatingSystem"]),
+      .target(name: "Redis", dependencies: ["Async", "Bits", "DatabaseKit", "Debugging", "COperatingSystem", "NIOOpenSSL"]),
         .testTarget(name: "RedisTests", dependencies: ["Redis"])
     ]
 )

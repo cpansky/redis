@@ -97,6 +97,10 @@ private let closeError = RedisError(identifier: "closed", reason: "Connection is
 
 /// Config options for a `RedisClient.
 public struct RedisClientConfig: Codable {
+
+    /// The Redis server's ssl enabled
+    public var sslEnabled: Bool
+
     /// The Redis server's hostname.
     public var hostname: String
 
@@ -112,6 +116,7 @@ public struct RedisClientConfig: Codable {
 
     /// Create a new `RedisClientConfig`
     public init(url: URL) {
+        self.sslEnabled = url.scheme == "https" || url.scheme == "rediss"
         self.hostname = url.host ?? "localhost"
         self.port = url.port ?? 6379
         self.password = url.password
@@ -120,6 +125,7 @@ public struct RedisClientConfig: Codable {
 
     /// Creates a new, default `RedisClientConfig`.
     public init() {
+        self.sslEnabled = false
         self.hostname = "localhost"
         self.port = 6379
     }
@@ -134,10 +140,15 @@ public struct RedisClientConfig: Codable {
             databaseSuffix = ""
         }
 
-        if let password = password {
-            urlString = "redis://:\(password)@\(hostname)\(databaseSuffix):\(port)"
-        } else {
-            urlString = "redis://\(hostname)\(databaseSuffix):\(port)"
+        switch (password, sslEnabled) {
+            case let (pass?, true):
+                urlString = "rediss://:\(password)@\(hostname)\(databaseSuffix):\(port)"
+            case let (pass?, false):
+                urlString = "redis://:\(password)@\(hostname)\(databaseSuffix):\(port)"
+            case (.none, true):
+                urlString = "rediss://\(hostname)\(databaseSuffix):\(port)"
+            case (.none, false):
+                urlString = "redis://\(hostname)\(databaseSuffix):\(port)"
         }
 
         guard let url = URL(string: urlString) else {

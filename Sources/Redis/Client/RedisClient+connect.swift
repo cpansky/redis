@@ -1,5 +1,6 @@
 import Async
 import NIO
+import NIOOpenSSL
 
 extension RedisClient {
     /// Connects to a Redis server using a TCP socket.
@@ -7,18 +8,43 @@ extension RedisClient {
         hostname: String = "localhost",
         port: Int = 6379,
         password: String? = nil,
+        sslEnabled: Bool = false,
         on worker: Worker,
         onError: @escaping (Error) -> Void
     ) -> Future<RedisClient> {
         let handler = QueueHandler<RedisData, RedisData>(on: worker, onError: onError)
-        let bootstrap = ClientBootstrap(group: worker.eventLoop)
+        let bootstrap: ClientBootstrap
+            = ClientBootstrap(group: worker.eventLoop)
             // Enable SO_REUSEADDR.
             .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
+        if sslEnabled {
+            do {
+                let sslContext = try SSLContext(configuration: .forClient())
+                let sslHandler = try OpenSSLClientHandler(context: sslContext)
+                _ = bootstrap
+                .channelInitializer { channel in
+                    return channel.pipeline
+                        .add(handler: sslHandler, first: true)
+                        .then { _ in
+                            channel.pipeline
+                            .addRedisHandlers()
+                            .then {
+                                channel.pipeline.add(handler: handler)
+                            }
+                        }
+                    }
+            } catch {
+                return worker.eventLoop.newFailedFuture(error: error)
+            }
+        } else {
+            _ = bootstrap
             .channelInitializer { channel in
                 return channel.pipeline.addRedisHandlers().then {
                     channel.pipeline.add(handler: handler)
                 }
             }
+        }
+
         return bootstrap.connect(host: hostname, port: port).map(to: RedisClient.self) { channel in
             return .init(queue: handler, channel: channel)
         }.flatMap(to: RedisClient.self) { client in
