@@ -97,9 +97,15 @@ private let closeError = RedisError(identifier: "closed", reason: "Connection is
 
 /// Config options for a `RedisClient.
 public struct RedisClientConfig: Codable {
+    
+    public enum SSLMode: String, Codable {
+        case enabled
+        case insecure
+        case disabled
+    }
 
     /// The Redis server's ssl enabled
-    public var sslEnabled: Bool
+    public var ssl: SSLMode
 
     /// The Redis server's hostname.
     public var hostname: String
@@ -116,7 +122,7 @@ public struct RedisClientConfig: Codable {
 
     /// Create a new `RedisClientConfig`
     public init(url: URL) {
-        self.sslEnabled = url.scheme == "https" || url.scheme == "rediss"
+        self.ssl = (url.scheme == "https" || url.scheme == "rediss") ? .enabled : .disabled
         self.hostname = url.host ?? "localhost"
         self.port = url.port ?? 6379
         self.password = url.password
@@ -125,7 +131,7 @@ public struct RedisClientConfig: Codable {
 
     /// Creates a new, default `RedisClientConfig`.
     public init() {
-        self.sslEnabled = false
+        self.ssl = .disabled
         self.hostname = "localhost"
         self.port = 6379
     }
@@ -140,14 +146,14 @@ public struct RedisClientConfig: Codable {
             databaseSuffix = ""
         }
 
-        switch (password, sslEnabled) {
-            case let (pass?, true):
+        switch (password, ssl) {
+            case let (pass?, .enabled), let (pass?, .insecure):
                 urlString = "rediss://:\(pass)@\(hostname)\(databaseSuffix):\(port)"
-            case let (pass?, false):
+            case let (pass?, .disabled):
                 urlString = "redis://:\(pass)@\(hostname)\(databaseSuffix):\(port)"
-            case (.none, true):
+            case (.none, .enabled), (.none, .insecure):
                 urlString = "rediss://\(hostname)\(databaseSuffix):\(port)"
-            case (.none, false):
+            case (.none, .disabled):
                 urlString = "redis://\(hostname)\(databaseSuffix):\(port)"
         }
 

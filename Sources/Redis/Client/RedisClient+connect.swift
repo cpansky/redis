@@ -8,7 +8,7 @@ extension RedisClient {
         hostname: String = "localhost",
         port: Int = 6379,
         password: String? = nil,
-        sslEnabled: Bool = false,
+        sslMode: RedisClientConfig.SSLMode = .disabled,
         on worker: Worker,
         onError: @escaping (Error) -> Void
         ) -> Future<RedisClient> {
@@ -24,8 +24,10 @@ extension RedisClient {
         }
         
         return bootstrap.connect(host: hostname, port: port).flatMap(to: RedisClient.self) { channel in
-            if sslEnabled {
-                let sslContext = try SSLContext(configuration: .forClient())
+            if sslMode == .enabled || sslMode == .insecure {
+                let tlsConfiguration: TLSConfiguration
+                    = .forClient(certificateVerification: sslMode == .insecure ? .none : .fullVerification)
+                let sslContext = try SSLContext(configuration:tlsConfiguration)
                 let sslHandler = try OpenSSLClientHandler(context: sslContext)
                 return channel.pipeline
                     .add(handler: sslHandler, first: true)

@@ -19,7 +19,7 @@ public final class RedisDatabase: Database {
             hostname: config.hostname,
             port: config.port,
             password: config.password,
-            sslEnabled: config.sslEnabled,
+            sslMode: config.ssl,
             on: worker
         ) { error in
             print("[Redis] \(error)")
