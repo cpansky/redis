@@ -79,7 +79,7 @@ extension RedisClient {
     }
 
     /// Sets key to a `RedisDataConvertible` type.
-    public func set<E>(_ key: String, to data: E) -> Future<Void> where E: RedisDataConvertible {
+    public func set<E>(_ key: String, to data: E, ttl: Int = -1) -> Future<Void> where E: RedisDataConvertible {
         return Future.flatMap(on: self.eventLoop) {
             let data = try data.convertToRedisData()
             switch data.storage {
@@ -90,7 +90,7 @@ extension RedisClient {
                     reason: "Set data must be of type bulkString"
                 )
             }
-            return self.rawSet(key, to: data)
+            return self.rawSet(key, to: data, ttl: ttl)
         }
     }
 
@@ -106,9 +106,9 @@ extension RedisClient {
     }
 
     /// Sets key to an encodable item.
-    public func jsonSet<E>(_ key: String, to entity: E) -> Future<Void> where E: Encodable {
+    public func jsonSet<E>(_ key: String, to entity: E, ttl: Int = -1) -> Future<Void> where E: Encodable {
         do {
-            return try set(key, to: JSONEncoder().encode(entity))
+            return try set(key, to: JSONEncoder().encode(entity), ttl: ttl)
         } catch {
             return eventLoop.newFailedFuture(error: error)
         }
@@ -122,7 +122,12 @@ extension RedisClient {
     }
 
     /// Sets key to `RedisData`.
-    public func rawSet(_ key: String, to data: RedisData) -> Future<Void> {
-        return command("SET", [RedisData(bulk: key), data]).transform(to: ())
+    public func rawSet(_ key: String, to data: RedisData, ttl: Int = -1) -> Future<Void> {
+		var commandData = [RedisData(bulk: key), data]
+		if ttl != -1 {
+			commandData += [RedisData(stringLiteral: "EX"), RedisData(stringLiteral: String(ttl))]
+		}
+		
+        return command("SET", commandData).transform(to: ())
     }
 }

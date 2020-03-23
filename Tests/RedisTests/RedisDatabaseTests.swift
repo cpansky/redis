@@ -75,6 +75,32 @@ class RedisDatabaseTests: XCTestCase {
         try redis.delete("hello").wait()
         XCTAssertNil(try redis.get("hello", as: String.self).wait())
     }
+	
+	func testSetWithTTL() throws {
+		let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        let config = RedisClientConfig.makeTest()
+        let database = try RedisDatabase(config: config)
+
+        let redis = try database.newConnection(on: group).wait()
+        defer { redis.close() }
+
+        _ = try redis.select(2).wait()
+        try redis.set("hello", to: "world", ttl: 3).wait()
+        let get = try redis.get("hello", as: String.self).wait()
+        XCTAssertEqual(get, "world")
+
+        _ = try redis.select(0).wait()
+        XCTAssertNil(try redis.get("hello", as: String.self).wait())
+
+		Thread.sleep(forTimeInterval: 5)
+		
+        _ = try redis.select(2).wait()
+        let reget = try redis.get("hello", as: String.self).wait()
+		XCTAssertNil(reget)
+
+        try redis.delete("hello").wait()
+        XCTAssertNil(try redis.get("hello", as: String.self).wait())
+	}
 
     static let allTests = [
         ("testConnection", testConnection),
